@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拉法業務日報 Dashboard — 8月</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface2: #fef2f2;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a1a;
+  --text2: #6b7280;
+  --text3: #9ca3af;
+  --teal: #c0152a;
+  --teal-dim: rgba(192,21,42,0.08);
+  --blue: #e02035;
+  --blue-dim: rgba(224,32,53,0.08);
+  --amber: #9b1c2e;
+  --amber-dim: rgba(155,28,46,0.08);
+  --red: #dc2626;
+  --red-dim: rgba(220,38,38,0.1);
+  --green: #b91c1c;
+  --green-dim: rgba(185,28,28,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.topbar {
+  background: #c0152a;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+}
+.topbar-title { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: #ffffff; }
+.topbar-sub { font-size: 12px; color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace; }
+.last-updated { font-size: 11px; color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace; }
+.refresh-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35);
+  color: #ffffff; font-size: 12px; padding: 5px 12px;
+  border-radius: 6px; cursor: pointer; font-family: 'Noto Sans TC', sans-serif;
+  transition: all 0.15s;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.28); }
+.main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab {
+  padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--border2); color: var(--text2);
+  background: transparent; transition: all 0.15s; font-family: 'Noto Sans TC', sans-serif;
+}
+.tab:hover { border-color: #c0152a; color: #c0152a; }
+.tab.active { background: rgba(192,21,42,0.08); border-color: #c0152a; color: #c0152a; }
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.scard {
+  background: #fff5f5;
+  border: 1px solid rgba(192,21,42,0.15);
+  border-radius: 10px;
+  padding: 16px;
+}
+.scard-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.scard-val { font-size: 26px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; margin-bottom: 4px; }
+.scard-sub { font-size: 11px; color: var(--text2); }
+.scard.teal .scard-val { color: #c0152a; }
+.scard.blue .scard-val { color: #e02035; }
+.scard.amber .scard-val { color: #9b1c2e; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 680px) { .two-col { grid-template-columns: 1fr; } }
+.panel {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 18px;
+}
+.panel-title {
+  font-size: 11px; font-weight: 700; color: #c0152a;
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;
+}
+.prow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.prow:last-child { margin-bottom: 0; }
+.pname { font-size: 13px; font-weight: 500; min-width: 44px; }
+.pbar-bg {
+  flex: 1; height: 6px; background: #f3f4f6;
+  border-radius: 3px; overflow: hidden;
+}
+.pbar { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+.ppct {
+  font-size: 12px; font-family: 'DM Mono', monospace;
+  min-width: 38px; text-align: right;
+}
+.pval { font-size: 11px; color: var(--text3); min-width: 68px; text-align: right; font-family: 'DM Mono', monospace; }
+.badge-ok   { color: #16a34a; }
+.badge-mid  { color: #c0152a; }
+.badge-low  { color: #dc2626; }
+.badge-none { color: var(--text3); }
+.chart-wrap { position: relative; width: 100%; height: 200px; }
+.region-block { margin-bottom: 14px; }
+.region-block:last-child { margin-bottom: 0; }
+.region-label {
+  font-size: 11px; font-weight: 700; color: #c0152a;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 0 0 6px 8px; margin-bottom: 4px;
+}
+.vacant-row { padding: 4px 0 6px; }
+.rank-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid #f3f4f6;
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-name { font-size: 13px; font-weight: 500; flex: 1; }
+.rank-bar-bg { width: 120px; height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
+.rank-bar { height: 100%; border-radius: 3px; }
+.rank-val { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text); min-width: 80px; text-align: right; }
+.state-box {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 300px; gap: 12px; color: var(--text3);
+}
+.spinner {
+  width: 28px; height: 28px; border: 2px solid #fee2e2;
+  border-top-color: #c0152a; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.note { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+.footer {
+  text-align: center; padding: 32px 20px 20px;
+  font-size: 11px; color: var(--text3);
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-dot"></div>
+    <span class="topbar-title">拉法業務日報 — 8月</span>
+    <span class="topbar-sub">DASHBOARD</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="last-updated" id="lastUpdated">載入中...</span>
+    <button class="refresh-btn" onclick="loadData()">重新整理</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs" id="metricTabs"></div>
+  <div class="summary-grid" id="summaryCards"></div>
+  <div id="mainContent">
+    <div class="state-box"><div class="spinner"></div><span>載入資料中...</span></div>
+  </div>
+</div>
+
+<div class="footer">拉法業務日報系統 · 資料來源：Google Sheets · 每次開啟自動更新</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ══════════════════════════════════════════════
+//  ★ 設定區：貼上你的 Apps Script Web App 網址
+// ══════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8DgebKEGrHFhdZBQnSlRYibyKMRIrCyYF1zlYM6Xu1Q9YASMerRCYVweuzIbhupVl/exec';
+
+// ══════════════════════════════════════════════
+//  固定資料（Sheets 讀取失敗時的 fallback）
+// ══════════════════════════════════════════════
+const FALLBACK_RAW = [
+  {date:'08/01',name:'連國廷',orders:3,bread:2, recv_today:0,recv:5000,  chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'謝明祥',orders:2,bread:1, recv_today:0,recv:8000,  chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'洪裕銘',orders:4,bread:3, recv_today:0,recv:12000, chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'曾瑞真',orders:1,bread:0, recv_today:0,recv:0,     chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'徐瑞廷',orders:5,bread:4, recv_today:0,recv:15000, chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'何星諺',orders:3,bread:2, recv_today:0,recv:7000,  chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'許峯閔',orders:2,bread:1, recv_today:0,recv:6000,  chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'陳其宏',orders:6,bread:5, recv_today:0,recv:20000, chain:0,item16:0,paid_chain:0},
+  {date:'08/01',name:'黃翎婕',orders:1,bread:0, recv_today:0,recv:0,     chain:0,item16:0,paid_chain:0},
+];
+const FALLBACK_TARGETS = {
+  '連國廷':{bread:18, chain:null, item16:null, paid_chain:null},
+  '謝明祥':{bread:18, chain:null, item16:null, paid_chain:null},
+  '洪裕銘':{bread:18, chain:null, item16:null, paid_chain:null},
+  '曾瑞真':{bread:18, chain:null, item16:null, paid_chain:null},
+  '徐瑞廷':{bread:18, chain:null, item16:null, paid_chain:null},
+  '何星諺':{bread:18, chain:null, item16:null, paid_chain:null},
+  '許峯閔':{bread:18, chain:null, item16:null, paid_chain:null},
+  '陳其宏':{bread:18, chain:null, item16:null, paid_chain:null},
+  '黃翎婕':{bread:18, chain:null, item16:null, paid_chain:null},
+};
+
+// ══════════════════════════════════════════════
+//  設定（已移除獨立的「改源合約家數」，僅保留合併後的「改源合約連鎖家數」）
+// ══════════════════════════════════════════════
+const METRICS = [
+  {key:'recv',       label:'收款金額',          unit:'元', hasTarget:false},
+  {key:'orders',     label:'訂單數',            unit:'單', hasTarget:false},
+  {key:'bread',      label:'1~8月麵包超人',     unit:'家', hasTarget:true},
+  {key:'chain',      label:'改源合約連鎖家數',   unit:'家', hasTarget:true},
+  {key:'item16',     label:'改源16入新入品店家', unit:'家', hasTarget:true},
+  {key:'paid_chain', label:'第四期付費連鎖',     unit:'家', hasTarget:true},
+];
+const REGIONS = [
+  { label: '北區', names: ['連國廷','謝明祥','洪裕銘'] },
+  { label: '桃園', names: ['曾瑞真'] },
+  { label: '中區', names: ['徐瑞廷','何星諺'] },
+  { label: '南區', names: ['許峯閔','陳其宏','黃翎婕'] },
+];
+const NAMES = REGIONS.flatMap(r => r.names);
+const REGION_COLORS = { '北區':'#c0152a', '桃園':'#9b1c2e', '中區':'#e02035', '南區':'#b91c1c' };
+const COLORS = NAMES.map(n => {
+  const r = REGIONS.find(rg => rg.names.includes(n));
+  return r ? REGION_COLORS[r.label] : '#c0152a';
+});
+
+let RAW = FALLBACK_RAW;
+let TARGETS = FALLBACK_TARGETS;
+let activeMetric = 'recv';
+let chartInst = null;
+
+async function loadData() {
+  document.getElementById('lastUpdated').textContent = '更新中...';
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    renderAll();
+    document.getElementById('lastUpdated').textContent = '示範資料（未設定 Apps Script URL）';
+    return;
+  }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (json.raw && json.targets) {
+      RAW = json.raw;
+      TARGETS = json.targets;
+      document.getElementById('lastUpdated').textContent = '最後更新：' + new Date().toLocaleTimeString('zh-TW');
+    } else {
+      throw new Error('格式錯誤');
+    }
+  } catch(e) {
+    console.warn('讀取失敗，使用示範資料', e);
+    RAW = FALLBACK_RAW; TARGETS = FALLBACK_TARGETS;
+    document.getElementById('lastUpdated').textContent = '示範資料（連線失敗）';
+  }
+  renderAll();
+}
+
+function getLatest(name, key) {
+  const rows = RAW.filter(r => r.name === name).sort((a,b) => b.date.localeCompare(a.date));
+  return rows.length ? (rows[0][key] || 0) : 0;
+}
+function getSum(name, key) {
+  return RAW.filter(r => r.name === name).reduce((acc, r) => acc + (r[key] || 0), 0);
+}
+// recv/bread/chain/item16/paid_chain = 累計型（抓最新一筆）；orders = 今日新增型（加總）
+function getValue(name, key) {
+  return key === 'orders' ? getSum(name, key) : getLatest(name, key);
+}
+function getTarget(name, key) {
+  return TARGETS[name]?.[key] ?? null;
+}
+
+function renderAll() {
+  renderTabs();
+  renderSummary();
+  renderMain();
+}
+
+function renderTabs() {
+  document.getElementById('metricTabs').innerHTML = METRICS.map(m =>
+    `<button class="tab${m.key===activeMetric?' active':''}" onclick="setMetric('${m.key}')">${m.label}</button>`
+  ).join('');
+}
+
+function renderSummary() {
+  const m = METRICS.find(x => x.key === activeMetric);
+  let html = '';
+  const latestDate = RAW.length ? RAW.reduce((a,b) => a.date>b.date?a:b).date : '—';
+
+  if (m.hasTarget) {
+    let tv=0, tt=0;
+    NAMES.forEach(n => { tv += getLatest(n,m.key); const t=getTarget(n,m.key); if(t) tt+=t; });
+    const pct = tt > 0 ? Math.round(tv/tt*100) : 0;
+    const above = NAMES.filter(n => { const v=getLatest(n,m.key),t=getTarget(n,m.key); return t&&v>=t; }).length;
+    const avg = NAMES.length ? (tv / NAMES.length).toFixed(1) : 0;
+    html = `
+      <div class="scard teal">
+        <div class="scard-label">整體達成率</div>
+        <div class="scard-val">${pct}%</div>
+        <div class="scard-sub">${m.label}</div>
+      </div>
+      <div class="scard blue">
+        <div class="scard-label">已達標人數</div>
+        <div class="scard-val">${above}<span style="font-size:16px;color:var(--text3)"> / ${NAMES.length}</span></div>
+        <div class="scard-sub">人達目標</div>
+      </div>
+      <div class="scard amber">
+        <div class="scard-label">人均累計</div>
+        <div class="scard-val">${avg}</div>
+        <div class="scard-sub">${m.unit} / 人</div>
+      </div>
+      <div class="scard">
+        <div class="scard-label">最新資料日期</div>
+        <div class="scard-val" style="font-size:20px;color:var(--text2)">${latestDate}</div>
+        <div class="scard-sub">本月累計</div>
+      </div>`;
+  } else if (m.key === 'orders') {
+    const total = NAMES.reduce((a,n) => a+getSum(n,'orders'), 0);
+    const max = Math.max(...NAMES.map(n => getSum(n,'orders')));
+    const top = NAMES.find(n => getSum(n,'orders') === max) || '—';
+    const avg = NAMES.length ? (total / NAMES.length).toFixed(1) : 0;
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊累計訂單</div><div class="scard-val">${total}</div><div class="scard-sub">單（本月）</div></div>
+      <div class="scard blue"><div class="scard-label">最多訂單</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
+      <div class="scard amber"><div class="scard-label">人均訂單</div><div class="scard-val">${avg}</div><div class="scard-sub">單 / 人</div></div>`;
+  } else if (m.key === 'recv') {
+    const total = NAMES.reduce((a,n) => a+getLatest(n,'recv'), 0);
+    const fmt = v => v>=10000 ? (v/10000).toFixed(1)+'萬' : v.toLocaleString(undefined,{maximumFractionDigits:1});
+    const max = Math.max(...NAMES.map(n => getLatest(n,'recv')));
+    const top = NAMES.find(n => getLatest(n,'recv') === max) || '—';
+    const avg = NAMES.length ? total / NAMES.length : 0;
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊累計收款</div><div class="scard-val" style="font-size:22px">${fmt(total)}</div><div class="scard-sub">元（本月）</div></div>
+      <div class="scard blue"><div class="scard-label">最高收款</div><div class="scard-val" style="font-size:22px">${fmt(max)}</div><div class="scard-sub">${top}</div></div>
+      <div class="scard amber"><div class="scard-label">人均收款</div><div class="scard-val" style="font-size:22px">${fmt(avg)}</div><div class="scard-sub">元 / 人</div></div>`;
+  } else {
+    const total = NAMES.reduce((a,n) => a+getLatest(n,m.key), 0);
+    const max = Math.max(...NAMES.map(n => getLatest(n,m.key)));
+    const top = NAMES.find(n => getLatest(n,m.key) === max) || '—';
+    const avg = NAMES.length ? (total / NAMES.length).toFixed(1) : 0;
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊累計</div><div class="scard-val">${total}</div><div class="scard-sub">${m.unit}（本月）</div></div>
+      <div class="scard blue"><div class="scard-label">最多</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
+      <div class="scard amber"><div class="scard-label">人均</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>`;
+  }
+  document.getElementById('summaryCards').innerHTML = html;
+}
+
+function renderMain() {
+  const m = METRICS.find(x => x.key === activeMetric);
+  const el = document.getElementById('mainContent');
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  if (m.hasTarget) {
+    el.innerHTML = `
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">個人達成率</div>
+          <div id="progBars"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">累計值 vs 目標</div>
+          <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+        </div>
+      </div>`;
+    renderProgressBars(m);
+    renderChart(m);
+  } else {
+    const maxVal = Math.max(...NAMES.map(n => getValue(n,m.key))) || 1;
+    const regionRows = REGIONS.map(region => {
+      const rColor = REGION_COLORS[region.label];
+      const rows = region.names.length === 0
+        ? `<div class="rank-row"><span style="font-size:12px;color:#9ca3af;font-style:italic">${region.vacant||'待補'}</span></div>`
+        : region.names.map(name => {
+            const val = getValue(name, m.key);
+            const dispVal = m.key==='recv'
+              ? 'NT$ '+val.toLocaleString()
+              : val+' '+m.unit;
+            return `<div class="rank-row">
+              <span class="rank-name" style="min-width:52px">${name}</span>
+              <div class="rank-bar-bg" style="flex:1"><div class="rank-bar" style="width:${Math.round(val/maxVal*100)}%;background:${rColor}"></div></div>
+              <span class="rank-val">${dispVal}</span>
+            </div>`;
+          }).join('') + (region.vacant2 ? `<div class="rank-row"><span style="font-size:12px;color:#9ca3af;font-style:italic">⚠ ${region.vacant2}</span></div>` : '');
+      return `<div class="region-block">
+        <div class="region-label" style="border-left:3px solid ${rColor}">${region.label}</div>
+        ${rows}
+      </div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">${m.label} — 區域明細</div>
+        <p class="note">此指標無目標值，僅顯示累計數字</p>
+        ${regionRows}
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-title">長條圖比較</div>
+        <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+      </div>`;
+    renderChart(m);
+  }
+}
+
+function renderProgressBars(m) {
+  const el = document.getElementById('progBars');
+  if (!el) return;
+  el.innerHTML = REGIONS.map(region => {
+    const rColor = REGION_COLORS[region.label];
+    const memberRows = region.names.length === 0
+      ? `<div class="prow vacant-row"><span style="font-size:12px;color:#9ca3af;font-style:italic">${region.vacant || '待補'}</span></div>`
+      : region.names.map(name => {
+          const v = getLatest(name, m.key);
+          const t = getTarget(name, m.key);
+          const p = t ? Math.round(v/t*100) : null;
+          const w = p !== null ? Math.min(p, 100) : 0;
+          const barColor = p === null ? '#d1d5db' : p >= 100 ? '#16a34a' : p >= 70 ? '#c0152a' : '#dc2626';
+          const pClass = p === null ? 'badge-none' : p >= 100 ? 'badge-ok' : p >= 70 ? 'badge-mid' : 'badge-low';
+          const pLabel = p === null ? '—' : p + '%';
+          const valStr = t ? `${v} / ${t}` : `${v}`;
+          return `<div class="prow">
+            <span class="pname">${name}</span>
+            <div class="pbar-bg"><div class="pbar" style="width:${w}%;background:${barColor}"></div></div>
+            <span class="ppct ${pClass}">${pLabel}</span>
+            <span class="pval">${valStr}</span>
+          </div>`;
+        }).join('') + (region.vacant2 ? `<div class="prow vacant-row"><span style="font-size:12px;color:#9ca3af;font-style:italic">⚠ ${region.vacant2}</span></div>` : '');
+    return `<div class="region-block">
+      <div class="region-label" style="border-left:3px solid ${rColor}">${region.label}</div>
+      ${memberRows}
+    </div>`;
+  }).join('');
+}
+
+function renderChart(m) {
+  const canvas = document.getElementById('myChart');
+  if (!canvas) return;
+  const vals = NAMES.map(n => getValue(n, m.key));
+  const tgts = m.hasTarget ? NAMES.map(n => getTarget(n, m.key) || 0) : null;
+  const datasets = [{
+    label: '最新累計',
+    data: vals,
+    backgroundColor: NAMES.map((_,i) => COLORS[i] + '99'),
+    borderColor: COLORS,
+    borderWidth: 1,
+    borderRadius: 4,
+  }];
+  if (tgts) {
+    datasets.push({
+      label: '目標值',
+      data: tgts,
+      backgroundColor: 'transparent',
+      borderColor: 'rgba(0,0,0,0.2)',
+      borderWidth: 1.5,
+      borderRadius: 4,
+    });
+  }
+  chartInst = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: NAMES, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9ca3af', font:{size:11}, autoSkip:false },
+             grid: { display: false },
+             border: { color: 'rgba(0,0,0,0.08)' } },
+        y: { ticks: { color: '#9ca3af', font:{size:10},
+               callback: v => v.toLocaleString() },
+             grid: { color: 'rgba(0,0,0,0.05)' },
+             border: { color: 'rgba(0,0,0,0.08)' } }
+      }
+    }
+  });
+}
+
+function setMetric(key) {
+  activeMetric = key;
+  renderAll();
+}
+
+loadData();
+</script>
+</body>
+</html>
