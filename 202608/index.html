@@ -322,7 +322,6 @@ function renderSummary() {
       <div class="scard">
         <div class="scard-label">最新資料日期</div>
         <div class="scard-val" style="font-size:20px;color:var(--text2)">${latestDate}</div>
-        <div class="scard-sub">第四期累計</div>
       </div>`;
   } else if (m.key === 'orders') {
     const total = NAMES.reduce((a,n) => a+getSum(n,'orders'), 0);
@@ -330,7 +329,7 @@ function renderSummary() {
     const top = NAMES.find(n => getSum(n,'orders') === max) || '—';
     const avg = NAMES.length ? (total / NAMES.length).toFixed(1) : 0;
     html = `
-      <div class="scard teal"><div class="scard-label">全隊累計訂單</div><div class="scard-val">${total}</div><div class="scard-sub">單（第四期）</div></div>
+      <div class="scard teal"><div class="scard-label">全隊累計訂單</div><div class="scard-val">${total}</div><div class="scard-sub">單（本月）</div></div>
       <div class="scard blue"><div class="scard-label">最多訂單</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
       <div class="scard amber"><div class="scard-label">人均訂單</div><div class="scard-val">${avg}</div><div class="scard-sub">單 / 人</div></div>`;
   } else if (m.key === 'recv') {
@@ -349,7 +348,7 @@ function renderSummary() {
     const top = NAMES.find(n => getLatest(n,m.key) === max) || '—';
     const avg = NAMES.length ? (total / NAMES.length).toFixed(1) : 0;
     html = `
-      <div class="scard teal"><div class="scard-label">全隊累計</div><div class="scard-val">${total}</div><div class="scard-sub">${m.unit}（第四期）</div></div>
+      <div class="scard teal"><div class="scard-label">全隊累計</div><div class="scard-val">${total}</div><div class="scard-sub">${m.unit}（本月）</div></div>
       <div class="scard blue"><div class="scard-label">最多</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
       <div class="scard amber"><div class="scard-label">人均</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>`;
   }
