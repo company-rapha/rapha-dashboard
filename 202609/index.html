@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拉法業務日報 Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a1a;
+  --text2: #6b7280;
+  --text3: #9ca3af;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+.topbar { background: #c0152a; border-bottom: 1px solid rgba(0,0,0,0.1); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+.topbar-title { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: #fff; }
+.topbar-sub { font-size: 12px; color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace; }
+.last-updated { font-size: 11px; color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace; }
+.refresh-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; transition: all 0.15s; }
+.refresh-btn:hover { background: rgba(255,255,255,0.28); }
+
+.main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid var(--border2); color: var(--text2); background: transparent; transition: all 0.15s; font-family: 'Noto Sans TC', sans-serif; }
+.tab:hover { border-color: #c0152a; color: #c0152a; }
+.tab.active { background: rgba(192,21,42,0.08); border-color: #c0152a; color: #c0152a; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.scard { background: #fff5f5; border: 1px solid rgba(192,21,42,0.15); border-radius: 10px; padding: 16px; }
+.scard-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.scard-val { font-size: 26px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; margin-bottom: 4px; }
+.scard-sub { font-size: 11px; color: var(--text2); }
+.scard.teal .scard-val  { color: #c0152a; }
+.scard.blue .scard-val  { color: #e02035; }
+.scard.amber .scard-val { color: #9b1c2e; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 680px) { .two-col { grid-template-columns: 1fr; } }
+
+.panel { background: #fff; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 18px; }
+.panel-title { font-size: 11px; font-weight: 700; color: #c0152a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+.prow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.prow:last-child { margin-bottom: 0; }
+.pname { font-size: 13px; font-weight: 500; min-width: 44px; }
+.pbar-bg { flex: 1; height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
+.pbar { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+.ppct { font-size: 12px; font-family: 'DM Mono', monospace; min-width: 38px; text-align: right; }
+.pval { font-size: 11px; color: var(--text3); min-width: 68px; text-align: right; font-family: 'DM Mono', monospace; }
+.badge-ok   { color: #16a34a; }
+.badge-mid  { color: #c0152a; }
+.badge-low  { color: #dc2626; }
+.badge-none { color: var(--text3); }
+
+.chart-wrap { position: relative; width: 100%; height: 200px; }
+
+.region-block { margin-bottom: 14px; }
+.region-block:last-child { margin-bottom: 0; }
+.region-label { font-size: 11px; font-weight: 700; color: #c0152a; text-transform: uppercase; letter-spacing: 0.07em; padding: 0 0 6px 8px; margin-bottom: 4px; }
+.rank-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+.rank-row:last-child { border-bottom: none; }
+.rank-name { font-size: 13px; font-weight: 500; flex: 1; }
+.rank-bar-bg { width: 120px; height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
+.rank-bar { height: 100%; border-radius: 3px; }
+.rank-val { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--text); min-width: 80px; text-align: right; }
+
+.state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 12px; color: var(--text3); }
+.spinner { width: 28px; height: 28px; border: 2px solid #fee2e2; border-top-color: #c0152a; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.note { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+.footer { text-align: center; padding: 32px 20px 20px; font-size: 11px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-dot"></div>
+    <span class="topbar-title">拉法業務日報</span>
+    <span class="topbar-sub" id="topbarSub">DASHBOARD</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="last-updated" id="lastUpdated">載入中...</span>
+    <button class="refresh-btn" onclick="loadData()">重新整理</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs" id="metricTabs"></div>
+  <div class="summary-grid" id="summaryCards"></div>
+  <div id="mainContent">
+    <div class="state-box"><div class="spinner"></div><span>載入資料中...</span></div>
+  </div>
+</div>
+
+<div class="footer">拉法業務日報系統 · 資料來源：Google Sheets · 每次開啟自動更新</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ★ 貼上 Apps Script Web App 網址（若有重新部署新版本，記得更新此處）
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8DgebKEGrHFhdZBQnSlRYibyKMRIrCyYF1zlYM6Xu1Q9YASMerRCYVweuzIbhupVl/exec';
+
+// ── fallback 示範資料（僅在連線失敗、或還沒設定 FIELD_CONFIG/TARGETS/SETTINGS 時顯示，非真實數字）──
+// 欄位代碼跟 Code_lafa.gs 的 setupFieldConfigSheet_() 預設值一致。
+const FALLBACK_FIELD_CONFIG = [
+  { key:'pay_today',   label:'收款',              unit:'元', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
+  { key:'order',       label:'訂單',              unit:'家', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
+  { key:'new_customer',label:'2026新客戶',        unit:'家', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
+  { key:'ratio',       label:'佔比產品',          unit:'樣', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
+  { key:'anpanman',    label:'1-9月新增麵包超人', unit:'個', hasTarget:true,  aggregate:'latest', scope:'period', teamTarget:36 },
+  { key:'trad',        label:'傳統',              unit:'家', hasTarget:true,  aggregate:'latest', scope:'period', teamTarget:null },
+  { key:'new16',       label:'家數',              unit:'家', hasTarget:false, aggregate:'latest', scope:'period', teamTarget:null },
+  { key:'paid_chain',  label:'付費連鎖',          unit:'家', hasTarget:true,  aggregate:'latest', scope:'period', teamTarget:null },
+];
+const FALLBACK_RAW = [
+  {date:'08/01',name:'連國廷', pay_today:5000,  order:3, new_customer:0, ratio:1, anpanman:2, trad:10, new16:0, paid_chain:0},
+  {date:'08/01',name:'謝明祥', pay_today:8000,  order:2, new_customer:0, ratio:0, anpanman:1, trad:12, new16:0, paid_chain:0},
+  {date:'08/01',name:'洪裕銘', pay_today:12000, order:4, new_customer:1, ratio:1, anpanman:3, trad:9,  new16:0, paid_chain:0},
+  {date:'08/01',name:'曾瑞真', pay_today:0,     order:1, new_customer:0, ratio:0, anpanman:0, trad:5,  new16:0, paid_chain:0},
+  {date:'08/01',name:'徐瑞廷', pay_today:15000, order:5, new_customer:1, ratio:2, anpanman:4, trad:14, new16:0, paid_chain:0},
+  {date:'08/01',name:'何星諺', pay_today:7000,  order:3, new_customer:0, ratio:1, anpanman:2, trad:8,  new16:0, paid_chain:0},
+  {date:'08/01',name:'許峯閔', pay_today:6000,  order:2, new_customer:0, ratio:1, anpanman:1, trad:7,  new16:0, paid_chain:0},
+  {date:'08/01',name:'陳其宏', pay_today:20000, order:6, new_customer:2, ratio:2, anpanman:5, trad:16, new16:0, paid_chain:0},
+  {date:'08/01',name:'黃翎婕', pay_today:0,     order:1, new_customer:0, ratio:0, anpanman:0, trad:4,  new16:0, paid_chain:0},
+];
+const FALLBACK_TARGETS = {
+  '連國廷': { trad:20, paid_chain:5 },
+  '謝明祥': { trad:20, paid_chain:5 },
+  '洪裕銘': { trad:20, paid_chain:5 },
+  '曾瑞真': { trad:20, paid_chain:5 },
+  '徐瑞廷': { trad:20, paid_chain:5 },
+  '何星諺': { trad:20, paid_chain:5 },
+  '許峯閔': { trad:20, paid_chain:5 },
+  '陳其宏': { trad:20, paid_chain:5 },
+  '黃翎婕': { trad:20, paid_chain:5 },
+};
+const FALLBACK_PERIOD_LABEL = '第五期 9月';
+const NO_SETTINGS_LABEL = '（尚未設定期別，請確認已部署新版 Code_lafa.gs 並建立 SETTINGS 分頁）';
+
+// ── 業務分區（Google Sheet 沒有「區域」概念，這塊仍固定在前端維護，
+//    新增/離職業務時，手動改這裡的名字清單即可）──
+const REGIONS = [
+  { label: '北區', names: ['連國廷','謝明祥','洪裕銘'] },
+  { label: '桃園', names: ['曾瑞真'] },
+  { label: '中區', names: ['徐瑞廷','何星諺'] },
+  { label: '南區', names: ['許峯閔','陳其宏','黃翎婕'] },
+];
+const NAMES = REGIONS.flatMap(r => r.names);
+const REGION_COLORS = { '北區':'#c0152a', '桃園':'#9b1c2e', '中區':'#e02035', '南區':'#b91c1c' };
+const COLORS = NAMES.map(n => {
+  const r = REGIONS.find(rg => rg.names.includes(n));
+  return r ? REGION_COLORS[r.label] : '#c0152a';
+});
+
+let METRICS = FALLBACK_FIELD_CONFIG;
+let RAW = FALLBACK_RAW;
+let TARGETS = FALLBACK_TARGETS;
+let PERIOD_LABEL = FALLBACK_PERIOD_LABEL;
+let activeMetric = null;
+let chartInst = null;
+
+async function loadData() {
+  document.getElementById('lastUpdated').textContent = '更新中...';
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    useFallback('未設定 Apps Script URL');
+    return;
+  }
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (json.raw && json.fieldConfig) {
+      RAW = json.raw;
+      TARGETS = json.targets || {};
+      METRICS = json.fieldConfig.length ? json.fieldConfig : FALLBACK_FIELD_CONFIG;
+      PERIOD_LABEL = (json.settings && json.settings.periodLabel) ? json.settings.periodLabel : NO_SETTINGS_LABEL;
+      document.getElementById('topbarSub').textContent = 'DASHBOARD · ' + PERIOD_LABEL;
+      document.getElementById('lastUpdated').textContent = '最後更新：' + new Date().toLocaleTimeString('zh-TW');
+    } else { throw new Error('格式錯誤'); }
+  } catch(e) {
+    console.warn('讀取失敗，使用示範資料', e);
+    useFallback('連線失敗');
+    return;
+  }
+  if (!METRICS.find(m => m.key === activeMetric)) activeMetric = METRICS[0] ? METRICS[0].key : null;
+  renderAll();
+}
+
+function useFallback(reason) {
+  RAW = FALLBACK_RAW; TARGETS = FALLBACK_TARGETS; METRICS = FALLBACK_FIELD_CONFIG;
+  PERIOD_LABEL = FALLBACK_PERIOD_LABEL;
+  if (!activeMetric) activeMetric = METRICS[0].key;
+  document.getElementById('topbarSub').textContent = 'DASHBOARD · ' + PERIOD_LABEL;
+  document.getElementById('lastUpdated').textContent = '示範資料（' + reason + '）';
+  renderAll();
+}
+
+function currentMetric() { return METRICS.find(m => m.key === activeMetric) || METRICS[0]; }
+
+// scope==='month' 時，只取「日期欄的月份」跟現在日曆月份相同的列；
+// scope==='period'(或未設定) 時，就是目前這個期別分頁裡的全部資料。
+// scope 是哪一種，完全由 FIELD_CONFIG 該欄位的「顯示範圍」決定，不是使用者手動切換。
+function getScopedRaw(scope) {
+  if (scope !== 'month') return RAW;
+  const nowMonth = new Date().getMonth() + 1;
+  return RAW.filter(r => parseInt(String(r.date).split('/')[0], 10) === nowMonth);
+}
+
+function getLatest(name, key, scope) {
+  const rows = getScopedRaw(scope).filter(r => r.name === name && (r[key] || 0) > 0)
+                  .sort((a,b) => b.date.localeCompare(a.date));
+  return rows.length ? (rows[0][key] || 0) : 0;
+}
+function getSum(name, key, scope) {
+  return getScopedRaw(scope).filter(r => r.name === name).reduce((acc, r) => acc + (r[key] || 0), 0);
+}
+function getValue(name, m) {
+  return m.aggregate === 'latest' ? getLatest(name, m.key, m.scope) : getSum(name, m.key, m.scope);
+}
+function getTarget(name, key) { return TARGETS[name]?.[key] ?? null; }
+function isMoney(m) { return m.unit === '元'; }
+function fmtVal(v, m) { return isMoney(m) && v >= 10000 ? Math.round(v/10000) + '萬' : v.toLocaleString(); }
+// PERIOD_LABEL 格式是「第五期 9月」，卡片小字只取空白前的期別名稱，不顯示月份
+function periodShortLabel() { return PERIOD_LABEL.split(/\s+/)[0] || PERIOD_LABEL; }
+function scopeLabel(m) { return m.scope === 'month' ? '本月' : periodShortLabel(); }
+
+function renderAll() {
+  if (!METRICS.length) {
+    document.getElementById('metricTabs').innerHTML = '';
+    document.getElementById('summaryCards').innerHTML = '';
+    document.getElementById('mainContent').innerHTML = '<div class="state-box">尚未在 FIELD_CONFIG 設定任何要顯示的欄位</div>';
+    return;
+  }
+  renderTabs(); renderSummary(); renderMain();
+}
+
+function renderTabs() {
+  document.getElementById('metricTabs').innerHTML = METRICS.map(m =>
+    `<button class="tab${m.key===activeMetric?' active':''}" onclick="setMetric('${m.key}')">${m.label}</button>`
+  ).join('');
+}
+
+function renderSummary() {
+  const m = currentMetric();
+  let html = '';
+
+  if (m.hasTarget && m.teamTarget) {
+    // 團隊固定目標模式：全隊共用同一個目標數字(來自 FIELD_CONFIG),不看 TARGETS、不分人
+    const tv = NAMES.reduce((a,n) => a + getValue(n,m), 0);
+    const tt = m.teamTarget;
+    const pct = tt > 0 ? Math.round(tv/tt*100) : 0;
+    const remaining = Math.max(tt - tv, 0);
+    const avg = Math.round(tv / NAMES.length);
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊達成率</div><div class="scard-val">${pct}%</div><div class="scard-sub">${m.label}</div></div>
+      <div class="scard blue"><div class="scard-label">距離目標</div><div class="scard-val">${remaining}</div><div class="scard-sub">還差 ${m.unit}（目標 ${tt}）</div></div>
+      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>`;
+
+  } else if (m.hasTarget) {
+    // 個人目標模式(原邏輯)：每個人自己的目標,來自 TARGETS 表
+    let tv=0, tt=0;
+    NAMES.forEach(n => { tv += getValue(n,m); const t=getTarget(n,m.key); if(t) tt+=t; });
+    const pct   = tt > 0 ? Math.round(tv/tt*100) : 0;
+    const above = NAMES.filter(n => { const v=getValue(n,m),t=getTarget(n,m.key); return t&&v>=t; }).length;
+    const avg   = Math.round(tv / NAMES.length);
+    const avgTgt= tt > 0 ? Math.round(tt / NAMES.length) : 0;
+    html = `
+      <div class="scard teal"><div class="scard-label">整體達成率</div><div class="scard-val">${pct}%</div><div class="scard-sub">${m.label}</div></div>
+      <div class="scard blue"><div class="scard-label">已達標人數</div><div class="scard-val">${above}<span style="font-size:16px;color:var(--text3)"> / ${NAMES.length}</span></div><div class="scard-sub">人達目標</div></div>
+      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">目標人均 ${avgTgt} ${m.unit}</div></div>`;
+
+  } else if (isMoney(m)) {
+    const total = NAMES.reduce((a,n) => a+getValue(n,m), 0);
+    const max   = Math.max(...NAMES.map(n => getValue(n,m)));
+    const top   = NAMES.find(n => getValue(n,m) === max) || '—';
+    const avg   = Math.round(total / NAMES.length);
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊${m.label}</div><div class="scard-val" style="font-size:22px">${fmtVal(total,m)}</div><div class="scard-sub">元（${scopeLabel(m)}）</div></div>
+      <div class="scard blue"><div class="scard-label">最高</div><div class="scard-val" style="font-size:22px">${fmtVal(max,m)}</div><div class="scard-sub">${top}</div></div>
+      <div class="scard amber"><div class="scard-label">人均</div><div class="scard-val" style="font-size:22px">${fmtVal(avg,m)}</div><div class="scard-sub">元 / 人</div></div>`;
+
+  } else {
+    const total = NAMES.reduce((a,n) => a+getValue(n,m), 0);
+    const max   = Math.max(...NAMES.map(n => getValue(n,m)));
+    const top   = NAMES.find(n => getValue(n,m) === max) || '—';
+    const avg   = Math.round(total / NAMES.length);
+    html = `
+      <div class="scard teal"><div class="scard-label">全隊累計</div><div class="scard-val">${total}</div><div class="scard-sub">${m.unit}（${scopeLabel(m)}）</div></div>
+      <div class="scard blue"><div class="scard-label">最多</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
+      <div class="scard amber"><div class="scard-label">人均</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>`;
+  }
+  document.getElementById('summaryCards').innerHTML = html;
+}
+
+function renderMain() {
+  const m  = currentMetric();
+  const el = document.getElementById('mainContent');
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  if (m.hasTarget && !m.teamTarget) {
+    // 個人目標模式：每個人自己一條進度條(vs 自己的 TARGETS 目標)
+    el.innerHTML = `
+      <div class="two-col">
+        <div class="panel"><div class="panel-title">個人達成率</div><div id="progBars"></div></div>
+        <div class="panel"><div class="panel-title">累計值 vs 目標</div><div class="chart-wrap"><canvas id="myChart"></canvas></div></div>
+      </div>`;
+    renderProgressBars(m);
+    renderChart(m);
+  } else {
+    // 團隊固定目標模式,或完全沒有目標：都用「誰貢獻多少」的排行榜呈現(不分人比目標,因為目標是全隊共用的)
+    const maxVal = Math.max(...NAMES.map(n => getValue(n,m))) || 1;
+    const noteText = m.hasTarget
+      ? `此指標的目標是全隊共用固定目標(${m.teamTarget} ${m.unit})，非逐人設定，下面是每個人各自的貢獻`
+      : '此指標無目標值，僅顯示累計數字';
+    const regionRows = REGIONS.map(region => {
+      const rColor = REGION_COLORS[region.label];
+      const rows = region.names.map(name => {
+        const val = getValue(name, m);
+        const dispVal = isMoney(m) ? 'NT$ ' + fmtVal(val,m) : val + ' ' + m.unit;
+        return `<div class="rank-row">
+          <span class="rank-name" style="min-width:52px">${name}</span>
+          <div class="rank-bar-bg" style="flex:1"><div class="rank-bar" style="width:${Math.round(val/maxVal*100)}%;background:${rColor}"></div></div>
+          <span class="rank-val">${dispVal}</span>
+        </div>`;
+      }).join('');
+      return `<div class="region-block">
+        <div class="region-label" style="border-left:3px solid ${rColor}">${region.label}</div>${rows}</div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="panel"><div class="panel-title">${m.label} — 區域明細</div><p class="note">${noteText}</p>${regionRows}</div>
+      <div class="panel" style="margin-top:16px"><div class="panel-title">長條圖比較</div><div class="chart-wrap"><canvas id="myChart"></canvas></div></div>`;
+    renderChart(m);
+  }
+}
+
+function renderProgressBars(m) {
+  const el = document.getElementById('progBars');
+  if (!el) return;
+  el.innerHTML = REGIONS.map(region => {
+    const rColor = REGION_COLORS[region.label];
+    const rows = region.names.map(name => {
+      const v = getLatest(name, m.key, m.scope);
+      const t = getTarget(name, m.key);
+      const p = t ? Math.round(v/t*100) : null;
+      const w = p !== null ? Math.min(p,100) : 0;
+      const barColor = p===null?'#d1d5db':p>=100?'#16a34a':p>=70?'#c0152a':'#dc2626';
+      const pClass   = p===null?'badge-none':p>=100?'badge-ok':p>=70?'badge-mid':'badge-low';
+      return `<div class="prow">
+        <span class="pname">${name}</span>
+        <div class="pbar-bg"><div class="pbar" style="width:${w}%;background:${barColor}"></div></div>
+        <span class="ppct ${pClass}">${p===null?'—':p+'%'}</span>
+        <span class="pval">${t ? v+' / '+t : v}</span>
+      </div>`;
+    }).join('');
+    return `<div class="region-block"><div class="region-label" style="border-left:3px solid ${rColor}">${region.label}</div>${rows}</div>`;
+  }).join('');
+}
+
+function renderChart(m) {
+  const canvas = document.getElementById('myChart');
+  if (!canvas) return;
+  const vals = NAMES.map(n => getValue(n, m));
+  const tgts = (m.hasTarget && !m.teamTarget) ? NAMES.map(n => getTarget(n,m.key)||0) : null;
+  const datasets = [{
+    label: '累計', data: vals,
+    backgroundColor: NAMES.map((_,i) => COLORS[i]+'99'),
+    borderColor: COLORS, borderWidth: 1, borderRadius: 4,
+  }];
+  if (tgts) datasets.push({ label:'目標值', data:tgts, backgroundColor:'transparent', borderColor:'rgba(0,0,0,0.2)', borderWidth:1.5, borderRadius:4 });
+  chartInst = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: NAMES, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks:{ color:'#9ca3af', font:{size:11}, autoSkip:false }, grid:{ display:false }, border:{ color:'rgba(0,0,0,0.08)' } },
+        y: { ticks:{ color:'#9ca3af', font:{size:10}, callback: v => isMoney(m) && v>=10000 ? Math.round(v/10000)+'萬' : v },
+             grid:{ color:'rgba(0,0,0,0.05)' }, border:{ color:'rgba(0,0,0,0.08)' } },
+      }
+    }
+  });
+}
+
+function setMetric(key) { activeMetric = key; renderAll(); }
+
+loadData();
+</script>
+</body>
+</html>
