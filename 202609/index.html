@@ -226,7 +226,7 @@ function getValue(name, m) {
 }
 function getTarget(name, key) { return TARGETS[name]?.[key] ?? null; }
 function isMoney(m) { return m.unit === '元'; }
-function fmtVal(v, m) { return isMoney(m) && v >= 10000 ? Math.round(v/10000) + '萬' : v.toLocaleString(); }
+function fmtVal(v, m) { return isMoney(m) && v >= 10000 ? (v/10000).toFixed(1) + '萬' : v.toLocaleString(undefined,{maximumFractionDigits:1}); }
 // PERIOD_LABEL 格式是「第五期 9月」，卡片小字只取空白前的期別名稱，不顯示月份
 function periodShortLabel() { return PERIOD_LABEL.split(/\s+/)[0] || PERIOD_LABEL; }
 function scopeLabel(m) { return m.scope === 'month' ? '本月' : periodShortLabel(); }
@@ -250,6 +250,7 @@ function renderTabs() {
 function renderSummary() {
   const m = currentMetric();
   let html = '';
+  const latestDate = RAW.length ? RAW.reduce((a,b) => a.date>b.date?a:b).date : '—';
 
   if (m.hasTarget && m.teamTarget) {
     // 團隊固定目標模式：全隊共用同一個目標數字(來自 FIELD_CONFIG),不看 TARGETS、不分人
@@ -257,11 +258,12 @@ function renderSummary() {
     const tt = m.teamTarget;
     const pct = tt > 0 ? Math.round(tv/tt*100) : 0;
     const remaining = Math.max(tt - tv, 0);
-    const avg = Math.round(tv / NAMES.length);
+    const avg = (tv / NAMES.length).toFixed(1);
     html = `
       <div class="scard teal"><div class="scard-label">全隊達成率</div><div class="scard-val">${pct}%</div><div class="scard-sub">${m.label}</div></div>
       <div class="scard blue"><div class="scard-label">距離目標</div><div class="scard-val">${remaining}</div><div class="scard-sub">還差 ${m.unit}（目標 ${tt}）</div></div>
-      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>`;
+      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">${m.unit} / 人</div></div>
+      <div class="scard"><div class="scard-label">最新資料日期</div><div class="scard-val" style="font-size:20px;color:var(--text2)">${latestDate}</div></div>`;
 
   } else if (m.hasTarget) {
     // 個人目標模式(原邏輯)：每個人自己的目標,來自 TARGETS 表
@@ -269,18 +271,19 @@ function renderSummary() {
     NAMES.forEach(n => { tv += getValue(n,m); const t=getTarget(n,m.key); if(t) tt+=t; });
     const pct   = tt > 0 ? Math.round(tv/tt*100) : 0;
     const above = NAMES.filter(n => { const v=getValue(n,m),t=getTarget(n,m.key); return t&&v>=t; }).length;
-    const avg   = Math.round(tv / NAMES.length);
-    const avgTgt= tt > 0 ? Math.round(tt / NAMES.length) : 0;
+    const avg   = (tv / NAMES.length).toFixed(1);
+    const avgTgt= tt > 0 ? (tt / NAMES.length).toFixed(1) : 0;
     html = `
       <div class="scard teal"><div class="scard-label">整體達成率</div><div class="scard-val">${pct}%</div><div class="scard-sub">${m.label}</div></div>
       <div class="scard blue"><div class="scard-label">已達標人數</div><div class="scard-val">${above}<span style="font-size:16px;color:var(--text3)"> / ${NAMES.length}</span></div><div class="scard-sub">人達目標</div></div>
-      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">目標人均 ${avgTgt} ${m.unit}</div></div>`;
+      <div class="scard amber"><div class="scard-label">人均累計</div><div class="scard-val">${avg}</div><div class="scard-sub">目標人均 ${avgTgt} ${m.unit}</div></div>
+      <div class="scard"><div class="scard-label">最新資料日期</div><div class="scard-val" style="font-size:20px;color:var(--text2)">${latestDate}</div></div>`;
 
   } else if (isMoney(m)) {
     const total = NAMES.reduce((a,n) => a+getValue(n,m), 0);
     const max   = Math.max(...NAMES.map(n => getValue(n,m)));
     const top   = NAMES.find(n => getValue(n,m) === max) || '—';
-    const avg   = Math.round(total / NAMES.length);
+    const avg   = total / NAMES.length;
     html = `
       <div class="scard teal"><div class="scard-label">全隊${m.label}</div><div class="scard-val" style="font-size:22px">${fmtVal(total,m)}</div><div class="scard-sub">元（${scopeLabel(m)}）</div></div>
       <div class="scard blue"><div class="scard-label">最高</div><div class="scard-val" style="font-size:22px">${fmtVal(max,m)}</div><div class="scard-sub">${top}</div></div>
@@ -290,7 +293,7 @@ function renderSummary() {
     const total = NAMES.reduce((a,n) => a+getValue(n,m), 0);
     const max   = Math.max(...NAMES.map(n => getValue(n,m)));
     const top   = NAMES.find(n => getValue(n,m) === max) || '—';
-    const avg   = Math.round(total / NAMES.length);
+    const avg   = (total / NAMES.length).toFixed(1);
     html = `
       <div class="scard teal"><div class="scard-label">全隊累計</div><div class="scard-val">${total}</div><div class="scard-sub">${m.unit}（${scopeLabel(m)}）</div></div>
       <div class="scard blue"><div class="scard-label">最多</div><div class="scard-val">${max}</div><div class="scard-sub">${top}</div></div>
