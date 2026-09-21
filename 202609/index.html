@@ -109,7 +109,6 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', s
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwV-ZxmgiFNUNW77pX1AZ1iX1d53mUcx37GmJTRGkYOJ6RracwHycvaISZcrM5zarWOww/exec';
 
 // ── fallback 示範資料（僅在連線失敗、或還沒設定 FIELD_CONFIG/TARGETS/SETTINGS 時顯示，非真實數字）──
-// 欄位代碼跟 Code_lafa.gs 的 setupFieldConfigSheet_() 預設值一致。
 const FALLBACK_FIELD_CONFIG = [
   { key:'pay_today',   label:'收款',              unit:'元', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
   { key:'order',       label:'訂單',              unit:'家', hasTarget:false, aggregate:'sum',    scope:'period', teamTarget:null },
@@ -174,7 +173,13 @@ async function loadData() {
     return;
   }
   try {
-    const res  = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
+    // 改用 POST 抓資料:POST 請求不會像 GET 一樣容易被瀏覽器/中繼代理快取住,
+    // 確保每次打開頁面都是抓到 Google Sheet 當下最新的內容。
+    const res  = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免瀏覽器對 application/json 送出 CORS 預檢請求
+      body: JSON.stringify({ action: 'dashboard' })
+    });
     const json = await res.json();
     if (json.raw && json.fieldConfig) {
       RAW = json.raw;
@@ -204,9 +209,6 @@ function useFallback(reason) {
 
 function currentMetric() { return METRICS.find(m => m.key === activeMetric) || METRICS[0]; }
 
-// scope==='month' 時，只取「日期欄的月份」跟現在日曆月份相同的列；
-// scope==='period'(或未設定) 時，就是目前這個期別分頁裡的全部資料。
-// scope 是哪一種，完全由 FIELD_CONFIG 該欄位的「顯示範圍」決定，不是使用者手動切換。
 function getScopedRaw(scope) {
   if (scope !== 'month') return RAW;
   const nowMonth = new Date().getMonth() + 1;
@@ -227,7 +229,6 @@ function getValue(name, m) {
 function getTarget(name, key) { return TARGETS[name]?.[key] ?? null; }
 function isMoney(m) { return m.unit === '元'; }
 function fmtVal(v, m) { return isMoney(m) && v >= 10000 ? (v/10000).toFixed(1) + '萬' : v.toLocaleString(undefined,{maximumFractionDigits:1}); }
-// PERIOD_LABEL 格式是「第五期 9月」，卡片小字只取空白前的期別名稱，不顯示月份
 function periodShortLabel() { return PERIOD_LABEL.split(/\s+/)[0] || PERIOD_LABEL; }
 function scopeLabel(m) { return m.scope === 'month' ? '本月' : periodShortLabel(); }
 
@@ -253,7 +254,6 @@ function renderSummary() {
   const latestDate = RAW.length ? RAW.reduce((a,b) => a.date>b.date?a:b).date : '—';
 
   if (m.hasTarget && m.teamTarget) {
-    // 團隊固定目標模式：全隊共用同一個目標數字(來自 FIELD_CONFIG),不看 TARGETS、不分人
     const tv = NAMES.reduce((a,n) => a + getValue(n,m), 0);
     const tt = m.teamTarget;
     const pct = tt > 0 ? Math.round(tv/tt*100) : 0;
@@ -266,7 +266,6 @@ function renderSummary() {
       <div class="scard"><div class="scard-label">最新資料日期</div><div class="scard-val" style="font-size:20px;color:var(--text2)">${latestDate}</div></div>`;
 
   } else if (m.hasTarget) {
-    // 個人目標模式(原邏輯)：每個人自己的目標,來自 TARGETS 表
     let tv=0, tt=0;
     NAMES.forEach(n => { tv += getValue(n,m); const t=getTarget(n,m.key); if(t) tt+=t; });
     const pct   = tt > 0 ? Math.round(tv/tt*100) : 0;
@@ -308,7 +307,6 @@ function renderMain() {
   if (chartInst) { chartInst.destroy(); chartInst = null; }
 
   if (m.hasTarget && !m.teamTarget) {
-    // 個人目標模式：每個人自己一條進度條(vs 自己的 TARGETS 目標)
     el.innerHTML = `
       <div class="two-col">
         <div class="panel"><div class="panel-title">個人達成率</div><div id="progBars"></div></div>
@@ -317,7 +315,6 @@ function renderMain() {
     renderProgressBars(m);
     renderChart(m);
   } else {
-    // 團隊固定目標模式,或完全沒有目標：都用「誰貢獻多少」的排行榜呈現(不分人比目標,因為目標是全隊共用的)
     const maxVal = Math.max(...NAMES.map(n => getValue(n,m))) || 1;
     const noteText = m.hasTarget
       ? `此指標的目標是全隊共用固定目標(${m.teamTarget} ${m.unit})，非逐人設定，下面是每個人各自的貢獻`
