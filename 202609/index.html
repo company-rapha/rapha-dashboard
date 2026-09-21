@@ -209,6 +209,14 @@ function useFallback(reason) {
 
 function currentMetric() { return METRICS.find(m => m.key === activeMetric) || METRICS[0]; }
 
+// 日期是 "M/D" 純文字(不補零),不能直接當字串比大小("9/9" 文字上會大於 "9/18")。
+// 一律先轉成「月*100+日」的數字再比較,才會照真正的日期先後排序。
+function mdToSortable_(dateStr) {
+  const parts = String(dateStr).split('/').map(Number);
+  if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return -1;
+  return parts[0] * 100 + parts[1];
+}
+
 function getScopedRaw(scope) {
   if (scope !== 'month') return RAW;
   const nowMonth = new Date().getMonth() + 1;
@@ -217,7 +225,7 @@ function getScopedRaw(scope) {
 
 function getLatest(name, key, scope) {
   const rows = getScopedRaw(scope).filter(r => r.name === name && (r[key] || 0) > 0)
-                  .sort((a,b) => b.date.localeCompare(a.date));
+                  .sort((a,b) => mdToSortable_(b.date) - mdToSortable_(a.date));
   return rows.length ? (rows[0][key] || 0) : 0;
 }
 function getSum(name, key, scope) {
@@ -251,7 +259,7 @@ function renderTabs() {
 function renderSummary() {
   const m = currentMetric();
   let html = '';
-  const latestDate = RAW.length ? RAW.reduce((a,b) => a.date>b.date?a:b).date : '—';
+  const latestDate = RAW.length ? RAW.reduce((a,b) => mdToSortable_(a.date) > mdToSortable_(b.date) ? a : b).date : '—';
 
   if (m.hasTarget && m.teamTarget) {
     const tv = NAMES.reduce((a,n) => a + getValue(n,m), 0);
