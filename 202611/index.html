@@ -111,15 +111,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', s
 // ① 設定區
 // ════════════════════════════════════════
 // ★ 11月 Apps Script（Code_lafa_202611.gs）部署後，把 /exec 網址貼這裡
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoQktKDYQhnXKpY3-LK8YrwKVtICQclLTcLjnMNfsO2FYYB8wbqArTnvOIohlH82yp/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQmdUfz7MhaKiixU8T5BjpE7qmReqveRaWmO4nCv5dO1mFk7fM6n8sbR2sgVlnTsKwxw/exec';
 
 // 業務分區：正式資料會自動讀 Google Sheet「業務名單」分頁（A 欄區域、B 欄姓名），
 // 改區域或增減業務請直接改 Sheet。下面這份只在示範資料時使用。
 const DEMO_REGIONS = [
-  { label: '北區', names: ['連國廷','謝明祥','洪裕銘'] },
-  { label: '桃園', names: ['曾瑞真'] },
-  { label: '中區', names: ['徐瑞廷','何星諺'] },
-  { label: '南區', names: ['許峯閔','陳其宏'] },
+  { label: '北區', names: ['謝明祥','連國廷','曾瑞真','洪裕銘'] },
+  { label: '中區', names: ['徐瑞廷','何星諺','許峯閔'] },
+  { label: '南區', names: ['宋育倫','陳其宏'] },
 ];
 
 // 指標（key 要跟 Apps Script 的欄位代碼一致）
@@ -156,7 +155,7 @@ function buildDemo() {
 const PALETTE = ['#c0152a', '#9b1c2e', '#e02035', '#b91c1c', '#7f1d1d', '#ef4444'];
 let REGION_COLORS = {}, COLORS = [];
 function setRegions(regions) {
-  REGIONS = (regions && regions.length) ? regions : DEMO_REGIONS;
+  REGIONS = regions;
   NAMES = REGIONS.flatMap(r => r.names);
   REGION_COLORS = {};
   REGIONS.forEach((r, i) => { REGION_COLORS[r.label] = PALETTE[i % PALETTE.length]; });
@@ -187,7 +186,13 @@ async function loadData() {
     const json = await res.json();
     if (!Array.isArray(json.raw)) throw new Error('格式錯誤');
     RAW = json.raw; TARGETS = json.targets || {}; IS_DEMO = false;
-    setRegions(json.regions);
+    // 正式資料一律用 Sheet 的名單；萬一沒讀到「業務名單」，就用目標表＋日報裡出現的姓名，絕不套用示範名單
+    let regions = json.regions;
+    if (!regions || !regions.length) {
+      const names = [...new Set([...Object.keys(TARGETS), ...RAW.map(r => r.name)])];
+      regions = [{ label: '業務（未讀到業務名單分頁）', names }];
+    }
+    setRegions(regions);
     document.getElementById('lastUpdated').textContent = '最後更新：' + new Date().toLocaleTimeString('zh-TW');
   } catch (e) {
     console.warn('讀取失敗，改用示範資料', e);
