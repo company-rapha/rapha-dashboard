@@ -111,10 +111,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', s
 // ① 設定區
 // ════════════════════════════════════════
 // ★ 11月 Apps Script（Code_lafa_202611.gs）部署後，把 /exec 網址貼這裡
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoQktKDYQhnXKpY3-LK8YrwKVtICQclLTcLjnMNfsO2FYYB8wbqArTnvOIohlH82yp/exec';
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 
-// 業務分區（新增／離職業務時改這裡）
-const REGIONS = [
+// 業務分區：正式資料會自動讀 Google Sheet「業務名單」分頁（A 欄區域、B 欄姓名），
+// 改區域或增減業務請直接改 Sheet。下面這份只在示範資料時使用。
+const DEMO_REGIONS = [
   { label: '北區', names: ['連國廷','謝明祥','洪裕銘'] },
   { label: '桃園', names: ['曾瑞真'] },
   { label: '中區', names: ['徐瑞廷','何星諺'] },
@@ -125,7 +126,7 @@ const REGIONS = [
 //   agg: 'sum'    → 把每天的「今日新增」加總（本月）
 //   agg: 'latest' → 取該業務最新一次回報的「累計」
 const METRICS = [
-  { key:'pay',              label:'收款金額',           unit:'元', agg:'sum',    hasTarget:false },
+  { key:'pay',              label:'收款金額',           unit:'元', agg:'sum',    hasTarget:false, scope:'本期' },
   { key:'orders',           label:'訂單家數',           unit:'家', agg:'sum',    hasTarget:false },
   { key:'new_cust',         label:'2026新客戶',         unit:'家', agg:'latest', hasTarget:false },
   { key:'ratio',            label:'佔比產品',           unit:'樣', agg:'sum',    hasTarget:false },
@@ -139,7 +140,8 @@ const METRICS = [
 // ════════════════════════════════════════
 // ② 示範資料（還沒填網址或連線失敗時顯示，非真實數字）
 // ════════════════════════════════════════
-const NAMES = REGIONS.flatMap(r => r.names);
+let REGIONS = DEMO_REGIONS;
+let NAMES = REGIONS.flatMap(r => r.names);
 function buildDemo() {
   const raw = [], targets = {};
   NAMES.forEach((name, i) => {
@@ -151,11 +153,22 @@ function buildDemo() {
   return { raw, targets };
 }
 
-const REGION_COLORS = { '北區':'#c0152a', '桃園':'#9b1c2e', '中區':'#e02035', '南區':'#b91c1c' };
-const COLORS = NAMES.map(n => REGION_COLORS[(REGIONS.find(r => r.names.includes(n)) || {}).label] || '#c0152a');
+const PALETTE = ['#c0152a', '#9b1c2e', '#e02035', '#b91c1c', '#7f1d1d', '#ef4444'];
+let REGION_COLORS = {}, COLORS = [];
+function setRegions(regions) {
+  REGIONS = (regions && regions.length) ? regions : DEMO_REGIONS;
+  NAMES = REGIONS.flatMap(r => r.names);
+  REGION_COLORS = {};
+  REGIONS.forEach((r, i) => { REGION_COLORS[r.label] = PALETTE[i % PALETTE.length]; });
+  COLORS = NAMES.map(n => REGION_COLORS[(REGIONS.find(r => r.names.includes(n)) || {}).label] || '#c0152a');
+}
+setRegions(DEMO_REGIONS);
+
+const OVERVIEW = { key: '__overview', label: '整體達成率' };
+const TARGET_METRICS = METRICS.filter(m => m.hasTarget);
 
 let RAW = [], TARGETS = {}, IS_DEMO = false;
-let activeMetric = METRICS[0].key;
+let activeMetric = OVERVIEW.key;
 let chartInst = null;
 
 // ════════════════════════════════════════
@@ -174,6 +187,7 @@ async function loadData() {
     const json = await res.json();
     if (!Array.isArray(json.raw)) throw new Error('格式錯誤');
     RAW = json.raw; TARGETS = json.targets || {}; IS_DEMO = false;
+    setRegions(json.regions);
     document.getElementById('lastUpdated').textContent = '最後更新：' + new Date().toLocaleTimeString('zh-TW');
   } catch (e) {
     console.warn('讀取失敗，改用示範資料', e);
@@ -183,6 +197,7 @@ async function loadData() {
 }
 
 function useDemo(reason) {
+  setRegions(DEMO_REGIONS);
   const d = buildDemo(); RAW = d.raw; TARGETS = d.targets; IS_DEMO = true;
   document.getElementById('lastUpdated').textContent = '示範資料（' + reason + '）';
   renderAll();
@@ -214,7 +229,7 @@ function getTodayNew(name, m) {
 }
 const isMoney = m => m.unit === '元';
 const fmt = (v, m) => isMoney(m) && v >= 10000 ? (v / 10000).toFixed(1) + '萬' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 });
-const scopeLabel = m => m.agg === 'sum' ? '本月' : (m.key === 'new_cust' ? '今年累計' : '累計');
+const scopeLabel = m => m.scope ? m.scope : m.agg === 'sum' ? '本月' : (m.key === 'new_cust' ? '今年累計' : '累計');
 function currentMetric() { return METRICS.find(m => m.key === activeMetric) || METRICS[0]; }
 
 // ════════════════════════════════════════
@@ -223,9 +238,60 @@ function currentMetric() { return METRICS.find(m => m.key === activeMetric) || M
 function renderAll() {
   document.getElementById('demoArea').innerHTML = IS_DEMO
     ? '<div class="demo">⚠ 目前顯示示範資料（非真實數字）。部署 11月 Apps Script 後，把 /exec 網址填進 APPS_SCRIPT_URL。</div>' : '';
-  document.getElementById('metricTabs').innerHTML = METRICS.map(m =>
+  document.getElementById('metricTabs').innerHTML = [OVERVIEW, ...METRICS].map(m =>
     `<button class="tab${m.key === activeMetric ? ' active' : ''}" onclick="setMetric('${m.key}')">${m.label}</button>`).join('');
+  if (activeMetric === OVERVIEW.key) { renderOverview(); return; }
   renderSummary(); renderMain();
+}
+
+// ── 整體達成率（全隊累計 ÷ 全隊目標）──
+function teamRate(m) {
+  let total = 0, tt = 0;
+  NAMES.forEach(n => { total += getValue(n, m); tt += getTarget(n, m.key) || 0; });
+  return { total, tt, pct: tt > 0 ? Math.round(total / tt * 100) : null };
+}
+const pctColor = p => p === null ? '#9ca3af' : p >= 100 ? '#16a34a' : p >= 70 ? '#c0152a' : '#dc2626';
+
+function renderOverview() {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const rates = TARGET_METRICS.map(m => ({ m, ...teamRate(m) }));
+
+  document.getElementById('summaryCards').innerHTML = rates.map(({ m, total, tt, pct }) => `
+    <div class="scard"><div class="scard-label">${m.label}</div>
+      <div class="scard-val" style="color:${pctColor(pct)}">${pct === null ? '—' : pct + '%'}</div>
+      <div class="scard-sub">${tt > 0 ? fmt(total, m) + ' / ' + fmt(tt, m) + ' ' + m.unit : '尚未設定目標'}</div></div>`).join('');
+
+  const bars = rates.map(({ m, total, tt, pct }) => `
+    <div class="prow">
+      <span class="pname" style="min-width:150px">${m.label}</span>
+      <div class="pbar-bg"><div class="pbar" style="width:${pct === null ? 0 : Math.min(pct, 100)}%;background:${pctColor(pct)}"></div></div>
+      <span class="ppct" style="color:${pctColor(pct)};min-width:46px">${pct === null ? '—' : pct + '%'}</span>
+      <span class="pval" style="min-width:90px">${tt > 0 ? total + ' / ' + tt : total}</span>
+    </div>`).join('');
+
+  const th = 'style="padding:8px 6px;font-size:11px;color:#9ca3af;font-weight:500;text-align:right;white-space:nowrap"';
+  const tableRows = REGIONS.map(region => {
+    const rColor = REGION_COLORS[region.label];
+    return `<tr><td colspan="${TARGET_METRICS.length + 1}" style="padding:10px 6px 4px;font-size:11px;font-weight:700;color:${rColor};border-left:3px solid ${rColor}">${region.label}</td></tr>` +
+      region.names.map(name => `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:7px 6px;font-size:13px;font-weight:500">${name}</td>
+        ${TARGET_METRICS.map(m => {
+          const v = getValue(name, m), t = getTarget(name, m.key);
+          const p = t ? Math.round(v / t * 100) : null;
+          return `<td style="padding:7px 6px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${pctColor(p)}" title="${v}${t ? ' / ' + t : ''}">${p === null ? '—' : p + '%'}</td>`;
+        }).join('')}
+      </tr>`).join('');
+  }).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="panel"><div class="panel-title">各項目整體達成率</div>
+      <p class="note">整體達成率 = 全隊累計 ÷ 全隊目標加總</p>${bars}</div>
+    <div class="panel" style="margin-top:16px;overflow-x:auto"><div class="panel-title">個人達成率一覽</div>
+      <table style="width:100%;border-collapse:collapse;min-width:560px">
+        <thead><tr><th style="text-align:left;padding:8px 6px;font-size:11px;color:#9ca3af;font-weight:500">業務</th>
+          ${TARGET_METRICS.map(m => `<th ${th}>${m.label.replace('改源止痛錠 ', '')}</th>`).join('')}</tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table></div>`;
 }
 
 function renderSummary() {
@@ -287,7 +353,7 @@ function renderMain() {
       }).join('');
       return `<div class="region-block"><div class="region-label" style="border-left:3px solid ${rColor}">${region.label}</div>${rows}</div>`;
     }).join('');
-    const note = m.agg === 'sum' ? '每日「今日新增」的本月加總' : '各業務最新一次回報的數字';
+    const note = m.agg === 'sum' ? `每日「今日新增」的${scopeLabel(m)}加總` : '各業務最新一次回報的數字';
     el.innerHTML = `
       <div class="panel"><div class="panel-title">${m.label} — 區域明細</div><p class="note">${note}，此指標無目標值</p>${regionRows}</div>
       <div class="panel" style="margin-top:16px"><div class="panel-title">長條圖比較</div><div class="chart-wrap"><canvas id="myChart"></canvas></div></div>`;
@@ -335,7 +401,7 @@ function renderChart(m) {
       plugins: { legend: { display: m.hasTarget, labels: { boxWidth: 10, font: { size: 11 } } } },
       scales: {
         x: { ticks: { color: '#9ca3af', font: { size: 11 }, autoSkip: false }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { color: '#9ca3af', font: { size: 10 }, callback: v => isMoney(m) && v >= 10000 ? Math.round(v / 10000) + '萬' : v },
+        y: { beginAtZero: true, ticks: { color: '#9ca3af', font: { size: 10 }, callback: v => isMoney(m) && v >= 10000 ? (v / 10000).toFixed(1).replace(/\.0$/, '') + '萬' : v },
              grid: { color: 'rgba(0,0,0,0.05)' } },
       }
     }
