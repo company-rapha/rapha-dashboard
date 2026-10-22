@@ -127,8 +127,8 @@ const DEMO_REGIONS = [
 const METRICS = [
   { key:'pay',              label:'收款金額',           unit:'元', agg:'sum',    hasTarget:false, scope:'本期' },
   { key:'orders',           label:'訂單家數',           unit:'家', agg:'sum',    hasTarget:false },
-  { key:'new_cust',         label:'2026新客戶',         unit:'家', agg:'latest', hasTarget:false },
-  { key:'ratio',            label:'佔比產品',           unit:'樣', agg:'sum',    hasTarget:false },
+  { key:'new_cust',         label:'2026新客戶',         unit:'家', agg:'sum',    hasTarget:false, scope:'本期' },
+  { key:'ratio',            label:'佔比產品',           unit:'樣', agg:'sum',    hasTarget:false, scope:'本期' },
   { key:'anpan_cum',        label:'1-12月麵包超人',     unit:'個', agg:'latest', hasTarget:true, todayKey:'anpan_new' },
   { key:'gy_trad_fam_cum',  label:'改源止痛錠 傳統家數', unit:'家', agg:'latest', hasTarget:true, todayKey:'gy_trad_fam_new' },
   { key:'gy_trad_box_cum',  label:'改源止痛錠 傳統盒數', unit:'盒', agg:'latest', hasTarget:true, todayKey:'gy_trad_box_new' },
